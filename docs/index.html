@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MiniAIons — Command Center for Claude CLI Agents</title>
+<meta name="description" content="A local web-based command center for managing multiple Claude CLI agent instances. Create agents, chain them into workflows, install MCPs, and track cost in real time." />
+<meta property="og:title" content="MiniAIons" />
+<meta property="og:description" content="Command center for Claude CLI agents. Sessions, agents, workflows, MCP marketplace — all local." />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230a0a0b'/><text x='50' y='66' text-anchor='middle' font-family='JetBrains Mono,monospace' font-size='48' font-weight='700' fill='%23a78bfa'>mA</text></svg>" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+/* ═══════════════════════════════════════════════════════════
+   DESIGN SYSTEM
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --bg: #0a0a0b;
+  --bg-elev: #111113;
+  --bg-surface: #141416;
+  --bg-surface-2: #1a1a1d;
+  --border: #27272a;
+  --border-strong: #3f3f46;
+  --fg: #fafafa;
+  --fg-muted: #a1a1aa;
+  --fg-dim: #71717a;
+  --fg-faint: #52525b;
+
+  --blue: #60a5fa;
+  --blue-deep: #3b82f6;
+  --violet: #a78bfa;
+  --violet-deep: #8b5cf6;
+  --emerald: #34d399;
+  --amber: #fbbf24;
+  --rose: #fb7185;
+
+  --grad: linear-gradient(135deg, var(--blue) 0%, var(--violet) 100%);
+  --grad-soft: linear-gradient(135deg, rgba(96,165,250,0.15) 0%, rgba(167,139,250,0.15) 100%);
+
+  --font-display: 'Instrument Serif', 'Times New Roman', serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --container: 1200px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  scroll-behavior: smooth;
+  background: var(--bg);
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--fg);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  letter-spacing: -0.003em;
+}
+
+/* Background atmosphere — subtle grid + vignette + grain */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(96,165,250,0.15), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 85% 40%, rgba(167,139,250,0.08), transparent 70%),
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: auto, auto, 48px 48px, 48px 48px;
+  background-position: 0 0, 0 0, -1px -1px, -1px -1px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='5'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  opacity: 0.6;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.shell { position: relative; z-index: 2; }
+
+a { color: inherit; text-decoration: none; }
+button { font: inherit; cursor: pointer; background: none; border: none; color: inherit; }
+
+::selection { background: var(--violet); color: var(--bg); }
+
+/* ═══════════════════════════════════════════════════════════
+   NAV
+   ═══════════════════════════════════════════════════════════ */
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+  background: rgba(10,10,11,0.72);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.nav-inner {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.logo-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--grad);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bg);
+  box-shadow: 0 4px 16px -4px rgba(167,139,250,0.6), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.nav-links {
+  display: flex;
+  gap: 4px;
+  font-size: 14px;
+}
+.nav-links a {
+  padding: 8px 14px;
+  border-radius: var(--r-sm);
+  color: var(--fg-muted);
+  transition: all 0.18s var(--ease);
+}
+.nav-links a:hover { color: var(--fg); background: rgba(255,255,255,0.04); }
+.nav-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--r-sm);
+  background: var(--fg);
+  color: var(--bg) !important;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  transition: all 0.18s var(--ease);
+}
+.nav-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 24px -8px rgba(255,255,255,0.3); }
+
+/* ═══════════════════════════════════════════════════════════
+   HERO
+   ═══════════════════════════════════════════════════════════ */
+section { position: relative; }
+.container {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+.hero {
+  padding: 96px 0 64px;
+  position: relative;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 8px;
+  border-radius: 100px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 12px;
+  color: var(--fg-muted);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  animation: fadeUp 0.8s var(--ease) both;
+}
+.tag .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--emerald);
+  box-shadow: 0 0 0 3px rgba(52,211,153,0.15);
+  animation: pulse 2s infinite;
+}
+
+h1.display {
+  margin-top: 28px;
+  font-family: var(--font-display);
+  font-size: clamp(56px, 9vw, 118px);
+  font-weight: 400;
+  line-height: 0.94;
+  letter-spacing: -0.035em;
+  max-width: 1000px;
+  animation: fadeUp 0.9s var(--ease) 0.08s both;
+}
+h1.display .italic { font-style: italic; color: var(--fg-muted); font-weight: 400; }
+h1.display .gradient {
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-style: italic;
+}
+
+.hero-sub {
+  margin-top: 28px;
+  max-width: 620px;
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--fg-muted);
+  animation: fadeUp 0.9s var(--ease) 0.16s both;
+}
+.hero-sub strong { color: var(--fg); font-weight: 500; }
+
+.hero-cta {
+  margin-top: 36px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  animation: fadeUp 0.9s var(--ease) 0.24s both;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s var(--ease);
+  letter-spacing: -0.005em;
+}
+.btn-primary {
+  background: var(--fg);
+  color: var(--bg);
+  box-shadow: 0 10px 30px -10px rgba(255,255,255,0.25), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 16px 40px -10px rgba(255,255,255,0.35); }
+.btn-ghost {
+  color: var(--fg);
+  border: 1px solid var(--border-strong);
+  background: rgba(255,255,255,0.02);
+}
+.btn-ghost:hover { border-color: var(--fg-muted); background: rgba(255,255,255,0.06); }
+
+.install {
+  margin-top: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  border-radius: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  overflow: hidden;
+  animation: fadeUp 0.9s var(--ease) 0.32s both;
+}
+.install-prompt { color: var(--fg-faint); padding: 12px 0 12px 16px; user-select: none; }
+.install-cmd { color: var(--fg); padding: 12px 14px 12px 8px; }
+.install-cmd .flag { color: var(--blue); }
+.install-copy {
+  padding: 12px 14px;
+  border-left: 1px solid var(--border);
+  color: var(--fg-dim);
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-family: var(--font-body);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.install-copy:hover { color: var(--fg); background: rgba(255,255,255,0.04); }
+
+/* ═══════════════════════════════════════════════════════════
+   PRODUCT PREVIEW (floating mock app)
+   ═══════════════════════════════════════════════════════════ */
+.preview-wrap {
+  margin-top: 80px;
+  padding: 12px;
+  background: linear-gradient(180deg, rgba(96,165,250,0.1), rgba(167,139,250,0.05));
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  box-shadow: 0 40px 100px -30px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.02) inset;
+  animation: fadeUp 1s var(--ease) 0.4s both;
+  position: relative;
+}
+.preview-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -120px -80px;
+  background: radial-gradient(ellipse at center, rgba(96,165,250,0.12), transparent 60%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.app-frame {
+  background: var(--bg-elev);
+  border-radius: 12px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 540px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+/* window chrome */
+.chrome {
+  grid-column: 1 / -1;
+  height: 38px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 8px;
+}
+.chrome-dots { display: flex; gap: 6px; }
+.chrome-dots span {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: var(--border-strong);
+}
+.chrome-dots span:nth-child(1) { background: #ff5f57; }
+.chrome-dots span:nth-child(2) { background: #febc2e; }
+.chrome-dots span:nth-child(3) { background: #28c840; }
+.chrome-url {
+  margin-left: auto; margin-right: auto;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  background: var(--bg);
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+/* sidebar mock */
+.mock-sidebar {
+  border-right: 1px solid var(--border);
+  padding: 18px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mock-sidebar .brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 6px 18px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+}
+.mock-sidebar .brand .logo-mark { width: 22px; height: 22px; font-size: 9px; border-radius: 6px; }
+.mock-sidebar .section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-faint);
+  padding: 12px 8px 6px;
+  font-weight: 600;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--fg-muted);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+.nav-item:hover { background: rgba(255,255,255,0.04); color: var(--fg); }
+.nav-item.active { background: rgba(96,165,250,0.1); color: var(--blue); }
+.nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+.nav-item .badge {
+  margin-left: auto;
+  font-size: 10px;
+  background: rgba(255,255,255,0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  color: var(--fg-dim);
+}
+.session-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--emerald);
+  box-shadow: 0 0 0 3px rgba(52,211,153,0.2);
+}
+.session-dot.busy { background: var(--amber); box-shadow: 0 0 0 3px rgba(251,191,36,0.2); animation: pulse 1.2s infinite; }
+.session-dot.idle { background: var(--fg-faint); box-shadow: none; }
+
+/* main pane */
+.mock-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.mock-topbar {
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  justify-content: space-between;
+}
+.mock-topbar .title {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.mock-topbar .title small {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--fg-dim);
+  margin-top: 2px;
+  font-family: var(--font-mono);
+}
+.stat-chips { display: flex; gap: 6px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  font-size: 11.5px;
+  font-family: var(--font-mono);
+  color: var(--fg-muted);
+}
+.chip.accent { color: var(--emerald); border-color: rgba(52,211,153,0.2); background: rgba(52,211,153,0.06); }
+.chip.violet { color: var(--violet); border-color: rgba(167,139,250,0.2); background: rgba(167,139,250,0.06); }
+
+.mock-chat {
+  flex: 1;
+  padding: 20px 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.msg { display: flex; gap: 12px; }
+.msg-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+.msg.user .msg-avatar { background: var(--border-strong); color: var(--fg); }
+.msg.agent .msg-avatar { background: var(--grad); color: var(--bg); }
+.msg-body { flex: 1; min-width: 0; }
+.msg-name { font-size: 12px; color: var(--fg-dim); margin-bottom: 4px; font-weight: 500; }
+.msg-name .model { font-family: var(--font-mono); font-size: 10.5px; margin-left: 6px; color: var(--fg-faint); background: rgba(255,255,255,0.05); padding: 1px 6px; border-radius: 3px; }
+.msg-text { font-size: 13.5px; color: var(--fg); line-height: 1.6; }
+.msg-text code { font-family: var(--font-mono); font-size: 12px; background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 3px; color: var(--blue); }
+
+.tool-card {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tool-card .tool-ico {
+  width: 22px; height: 22px; border-radius: 5px;
+  background: rgba(96,165,250,0.12); color: var(--blue);
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.tool-card .tool-ico svg { width: 13px; height: 13px; }
+.tool-card .tool-name { color: var(--fg); font-weight: 500; }
+.tool-card .tool-path { color: var(--fg-dim); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tool-card .tool-status { margin-left: auto; color: var(--emerald); font-size: 10.5px; }
+
+.thinking-block {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(167,139,250,0.05);
+  border-left: 2px solid var(--violet);
+  border-radius: 0 8px 8px 0;
+  font-size: 12.5px;
+  color: var(--fg-muted);
+  font-style: italic;
+  line-height: 1.55;
+}
+.thinking-block .label {
+  display: block;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 10.5px;
+  color: var(--violet);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+  font-family: var(--font-mono);
+}
+
+.typing {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: var(--violet);
+  vertical-align: text-bottom;
+  animation: blink 1s infinite;
+  margin-left: 2px;
+}
+
+.mock-composer {
+  margin: 0 24px 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--fg-dim);
+}
+.mock-composer .cursor {
+  display: inline-block;
+  width: 2px;
+  height: 15px;
+  background: var(--blue);
+  animation: blink 1s infinite;
+}
+.mock-composer .send-btn {
+  margin-left: auto;
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: var(--grad);
+  display: grid; place-items: center;
+  color: var(--bg);
+}
+.mock-composer .send-btn svg { width: 14px; height: 14px; }
+
+/* ═══════════════════════════════════════════════════════════
+   TRUSTED BY / LOGOS BAR
+   ═══════════════════════════════════════════════════════════ */
+.built-on {
+  padding: 72px 0 32px;
+  text-align: center;
+}
+.built-on-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--fg-faint);
+  font-weight: 600;
+}
+.built-on-logos {
+  margin-top: 24px;
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+  font-family: var(--font-mono);
+  color: var(--fg-dim);
+  font-size: 14px;
+  font-weight: 500;
+}
+.built-on-logos span { transition: color 0.2s; }
+.built-on-logos span:hover { color: var(--fg); }
+
+/* ═══════════════════════════════════════════════════════════
+   SECTIONS
+   ═══════════════════════════════════════════════════════════ */
+.section {
+  padding: 120px 0;
+  position: relative;
+}
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--violet);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+.eyebrow::before {
+  content: '';
+  width: 20px;
+  height: 1px;
+  background: var(--violet);
+}
+.section-title {
+  margin-top: 20px;
+  font-family: var(--font-display);
+  font-size: clamp(40px, 5.5vw, 68px);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  max-width: 800px;
+}
+.section-title .italic { font-style: italic; color: var(--fg-muted); }
+.section-sub {
+  margin-top: 20px;
+  max-width: 640px;
+  font-size: 17px;
+  color: var(--fg-muted);
+  line-height: 1.55;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE GRID
+   ═══════════════════════════════════════════════════════════ */
+.feature-grid {
+  margin-top: 72px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.feature {
+  padding: 36px 32px;
+  background: var(--bg-elev);
+  transition: background 0.25s var(--ease);
+  position: relative;
+  overflow: hidden;
+}
+.feature:hover { background: var(--bg-surface); }
+.feature::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(96,165,250,0.06), transparent 40%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.feature:hover::after { opacity: 1; }
+
+.feature-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-strong);
+  display: grid;
+  place-items: center;
+  margin-bottom: 22px;
+  color: var(--blue);
+  position: relative;
+}
+.feature:nth-child(2) .feature-icon { color: var(--violet); }
+.feature:nth-child(3) .feature-icon { color: var(--emerald); }
+.feature:nth-child(4) .feature-icon { color: var(--amber); }
+.feature:nth-child(5) .feature-icon { color: var(--rose); }
+.feature:nth-child(6) .feature-icon { color: var(--blue); }
+
+.feature-icon svg { width: 18px; height: 18px; }
+
+.feature h3 {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 8px;
+}
+.feature p {
+  font-size: 13.5px;
+  color: var(--fg-muted);
+  line-height: 1.6;
+}
+.feature .meta {
+  margin-top: 16px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.feature .pill {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  padding: 3px 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg-dim);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SHOWCASE SECTIONS (alternating)
+   ═══════════════════════════════════════════════════════════ */
+.showcase {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 80px;
+  align-items: center;
+  margin-top: 72px;
+}
+.showcase.reverse { grid-template-columns: 1.3fr 1fr; }
+.showcase.reverse .showcase-text { order: 2; }
+
+.showcase-text h2 {
+  font-family: var(--font-display);
+  font-size: 44px;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-weight: 400;
+}
+.showcase-text h2 .italic { font-style: italic; color: var(--fg-muted); }
+.showcase-text p {
+  margin-top: 18px;
+  font-size: 16px;
+  color: var(--fg-muted);
+  line-height: 1.6;
+}
+.showcase-text .feat-list {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  list-style: none;
+}
+.feat-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14.5px;
+  color: var(--fg);
+}
+.feat-list li::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: var(--grad-soft);
+  border: 1px solid rgba(167,139,250,0.3);
+  flex-shrink: 0;
+  position: relative;
+}
+.feat-list li::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--violet);
+  margin-left: 5px;
+  margin-top: 8px;
+}
+
+/* Showcase cards */
+.showcase-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 30px 80px -30px rgba(0,0,0,0.6);
+  position: relative;
+}
+.showcase-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(180deg, rgba(167,139,250,0.3), transparent 50%);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+}
+
+/* Agent card */
+.agent-card-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.agent-card-header .agent-ico {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--emerald), #10b981);
+  display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  color: var(--bg);
+}
+.agent-card-header h4 {
+  font-size: 14.5px; font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.agent-card-header p {
+  font-size: 12px; color: var(--fg-dim); margin-top: 2px;
+}
+.agent-card-header .launch {
+  margin-left: auto;
+  padding: 7px 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.agent-code {
+  padding: 22px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.75;
+  background:
+    linear-gradient(180deg, transparent, rgba(10,10,11,0.6));
+}
+.agent-code .fm { color: var(--fg-dim); }
+.agent-code .k { color: var(--violet); }
+.agent-code .v { color: var(--blue); }
+.agent-code .s { color: var(--emerald); }
+.agent-code .c { color: var(--fg-faint); }
+
+/* Workflow showcase */
+.workflow-card {
+  padding: 20px;
+}
+.workflow-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wf-step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-surface);
+  transition: all 0.2s;
+  position: relative;
+}
+.wf-step.done { border-color: rgba(52,211,153,0.25); }
+.wf-step.active {
+  border-color: rgba(96,165,250,0.4);
+  background: linear-gradient(90deg, rgba(96,165,250,0.08), transparent);
+  box-shadow: 0 0 0 1px rgba(96,165,250,0.1);
+}
+.wf-step.pending { opacity: 0.6; }
+.wf-step .num {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: var(--bg); border: 1px solid var(--border-strong);
+  display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  color: var(--fg-dim);
+  flex-shrink: 0;
+}
+.wf-step.done .num {
+  background: rgba(52,211,153,0.15);
+  border-color: rgba(52,211,153,0.3);
+  color: var(--emerald);
+}
+.wf-step.active .num {
+  background: rgba(96,165,250,0.15);
+  border-color: rgba(96,165,250,0.4);
+  color: var(--blue);
+}
+.wf-step .info { flex: 1; min-width: 0; }
+.wf-step .name { font-size: 13.5px; font-weight: 500; }
+.wf-step .detail { font-size: 12px; color: var(--fg-dim); margin-top: 2px; font-family: var(--font-mono); }
+.wf-step .model-pill {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  padding: 3px 8px;
+  background: rgba(167,139,250,0.08);
+  border: 1px solid rgba(167,139,250,0.2);
+  border-radius: 5px;
+  color: var(--violet);
+}
+.wf-step .status-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.wf-step.done .status-dot { background: var(--emerald); }
+.wf-step.active .status-dot { background: var(--blue); box-shadow: 0 0 0 4px rgba(96,165,250,0.2); animation: pulse 1.4s infinite; }
+.wf-step.pending .status-dot { background: var(--fg-faint); }
+
+.wf-connector {
+  height: 12px;
+  width: 1px;
+  background: var(--border);
+  margin-left: 32px;
+}
+
+/* MCP Marketplace */
+.mcp-card {
+  padding: 22px;
+}
+.mcp-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 18px;
+}
+.mcp-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: var(--fg-dim);
+  text-align: center;
+  font-weight: 500;
+}
+.mcp-tab.active {
+  background: var(--bg-elev);
+  color: var(--fg);
+  box-shadow: 0 2px 8px -2px rgba(0,0,0,0.3);
+}
+.mcp-tab .count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  margin-left: 6px;
+  color: var(--fg-faint);
+}
+
+.mcp-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.mcp-item {
+  padding: 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: border-color 0.2s;
+}
+.mcp-item:hover { border-color: var(--border-strong); }
+.mcp-item .row { display: flex; align-items: center; gap: 10px; }
+.mcp-item .mcp-ico {
+  width: 30px; height: 30px; border-radius: 7px;
+  display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  flex-shrink: 0;
+}
+.mcp-item .name { font-size: 13px; font-weight: 600; letter-spacing: -0.005em; }
+.mcp-item .cat { font-size: 10.5px; font-family: var(--font-mono); color: var(--fg-dim); margin-top: 1px; }
+.mcp-item .desc { font-size: 11.5px; color: var(--fg-dim); margin-top: 10px; line-height: 1.45; }
+.mcp-item .install-btn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(96,165,250,0.1);
+  color: var(--blue);
+  border: 1px solid rgba(96,165,250,0.2);
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.mcp-item.installed .install-btn { color: var(--emerald); background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.2); }
+
+/* ═══════════════════════════════════════════════════════════
+   CONFIG SECTION
+   ═══════════════════════════════════════════════════════════ */
+.config-grid {
+  margin-top: 64px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+.config-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.config-card-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--fg-muted);
+}
+.config-card-header .filename { color: var(--fg); font-weight: 500; }
+.config-card-header::before {
+  content: '';
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 0 3px rgba(251,191,36,0.15);
+}
+.config-code {
+  padding: 22px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+.config-code .k { color: var(--violet); }
+.config-code .s { color: var(--emerald); }
+.config-code .n { color: var(--amber); }
+.config-code .c { color: var(--fg-faint); }
+.config-code .p { color: var(--fg-muted); }
+
+/* ═══════════════════════════════════════════════════════════
+   TECH STACK
+   ═══════════════════════════════════════════════════════════ */
+.tech-stack {
+  margin-top: 48px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.tech-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  transition: all 0.2s;
+}
+.tech-chip:hover { color: var(--fg); border-color: var(--border-strong); transform: translateY(-1px); }
+.tech-chip .v { font-family: var(--font-mono); font-size: 11px; color: var(--fg-faint); }
+
+/* ═══════════════════════════════════════════════════════════
+   FOOTER CTA
+   ═══════════════════════════════════════════════════════════ */
+.cta-final {
+  margin: 0 auto;
+  max-width: var(--container);
+  padding: 80px 28px 40px;
+  text-align: center;
+}
+.cta-card {
+  position: relative;
+  padding: 80px 40px;
+  border-radius: 28px;
+  background:
+    radial-gradient(ellipse at top, rgba(96,165,250,0.15), transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(167,139,250,0.1), transparent 60%),
+    var(--bg-elev);
+  border: 1px solid rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.cta-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask: radial-gradient(ellipse at center, black, transparent 70%);
+  -webkit-mask: radial-gradient(ellipse at center, black, transparent 70%);
+  pointer-events: none;
+}
+.cta-card h2 {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: clamp(40px, 6vw, 72px);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+}
+.cta-card h2 .italic { font-style: italic; color: var(--fg-muted); }
+.cta-card p {
+  position: relative;
+  margin: 22px auto 0;
+  max-width: 560px;
+  font-size: 17px;
+  color: var(--fg-muted);
+}
+.cta-card .hero-cta {
+  justify-content: center;
+  position: relative;
+}
+
+footer {
+  padding: 40px 28px 60px;
+  border-top: 1px solid var(--border);
+  max-width: var(--container);
+  margin: 80px auto 0;
+}
+.footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+  font-size: 13px;
+  color: var(--fg-dim);
+}
+.footer-links { display: flex; gap: 24px; }
+.footer-links a:hover { color: var(--fg); }
+
+/* ═══════════════════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════════════════ */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Reveal on scroll */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.9s var(--ease), transform 0.9s var(--ease);
+}
+.reveal.in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════ */
+@media (max-width: 920px) {
+  .feature-grid { grid-template-columns: repeat(2, 1fr); }
+  .showcase, .showcase.reverse { grid-template-columns: 1fr; gap: 40px; }
+  .showcase.reverse .showcase-text { order: 0; }
+  .config-grid { grid-template-columns: 1fr; }
+  .app-frame { grid-template-columns: 1fr; }
+  .mock-sidebar { display: none; }
+  .nav-links { display: none; }
+  .section { padding: 80px 0; }
+  .hero { padding: 64px 0 40px; }
+}
+@media (max-width: 560px) {
+  .feature-grid { grid-template-columns: 1fr; }
+  .mcp-list { grid-template-columns: 1fr; }
+  .container, .nav-inner { padding: 0 20px; }
+  .install { font-size: 11.5px; }
+  .cta-card { padding: 56px 24px; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ═══════════════════════════ NAV ═══════════════════════════ -->
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="#top">
+      <span class="logo-mark">mA</span>
+      MiniAIons
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#agents">Agents</a>
+      <a href="#workflows">Workflows</a>
+      <a href="#config">Config</a>
+    </div>
+    <a class="nav-cta" href="https://github.com/pulkitkkr/MiniAIons" target="_blank" rel="noopener">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-3.16 19.49c.5.09.68-.22.68-.48 0-.24-.01-.87-.01-1.7-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.91.83.09-.64.35-1.08.63-1.33-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.58 9.58 0 0112 6.8c.85 0 1.71.11 2.51.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85 0 1.34-.01 2.42-.01 2.75 0 .27.18.58.69.48A10 10 0 0012 2z"/></svg>
+      GitHub
+    </a>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════ HERO ═══════════════════════════ -->
+<section class="hero" id="top">
+  <div class="container">
+    <span class="tag">
+      <span class="dot"></span>
+      Local-first · Open source · Works with any Claude model
+    </span>
+
+    <h1 class="display">
+      Your agents.<br>
+      Your workflows.<br>
+      <span class="gradient">One command center.</span>
+    </h1>
+
+    <p class="hero-sub">
+      MiniAIons is a local web app that wraps the Claude Code CLI into a <strong>modern multi-session command center</strong>. Run parallel agent sessions, chain them into workflows, install MCPs from a marketplace, and track cost in real time — all from <strong>http://localhost:5173</strong>.
+    </p>
+
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="https://github.com/pulkitkkr/MiniAIons" target="_blank" rel="noopener">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-3.16 19.49c.5.09.68-.22.68-.48 0-.24-.01-.87-.01-1.7-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.91.83.09-.64.35-1.08.63-1.33-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.58 9.58 0 0112 6.8c.85 0 1.71.11 2.51.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85 0 1.34-.01 2.42-.01 2.75 0 .27.18.58.69.48A10 10 0 0012 2z"/></svg>
+        Star on GitHub
+      </a>
+      <a class="btn btn-ghost" href="#features">
+        Explore features
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+
+    <div class="install" id="installCmd">
+      <span class="install-prompt">$</span>
+      <span class="install-cmd">git clone https://github.com/pulkitkkr/MiniAIons.git <span class="flag">&amp;&amp;</span> ./launch.sh</span>
+      <button class="install-copy" onclick="copyInstall()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
+        <span id="copyLabel">Copy</span>
+      </button>
+    </div>
+
+    <!-- Floating product preview -->
+    <div class="preview-wrap">
+      <div class="app-frame">
+        <div class="chrome">
+          <div class="chrome-dots"><span></span><span></span><span></span></div>
+          <div class="chrome-url">localhost:5173 / sessions / trip-planner</div>
+        </div>
+
+        <!-- sidebar -->
+        <aside class="mock-sidebar">
+          <div class="brand">
+            <span class="logo-mark">mA</span> MiniAIons
+          </div>
+          <div class="nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            Dashboard
+          </div>
+          <div class="nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+            Projects <span class="badge">8</span>
+          </div>
+          <div class="nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 22v-2a6 6 0 016-6h4a6 6 0 016 6v2"/></svg>
+            Agents <span class="badge">7</span>
+          </div>
+          <div class="nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+            Workflows
+          </div>
+          <div class="nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+            MCPs
+          </div>
+
+          <div class="section-label">Active Sessions</div>
+          <div class="nav-item active">
+            <span class="session-dot busy"></span>
+            Trip Planner
+          </div>
+          <div class="nav-item">
+            <span class="session-dot"></span>
+            Code Reviewer
+          </div>
+          <div class="nav-item">
+            <span class="session-dot idle"></span>
+            Budget Agent
+          </div>
+        </aside>
+
+        <!-- main -->
+        <div class="mock-main">
+          <div class="mock-topbar">
+            <div class="title">
+              Trip Planner — Tokyo, 5 days
+              <small>session_id: 49e323a3 · model: opus</small>
+            </div>
+            <div class="stat-chips">
+              <span class="chip violet">14.2k tok</span>
+              <span class="chip accent">$0.089</span>
+              <span class="chip">opus</span>
+            </div>
+          </div>
+
+          <div class="mock-chat">
+            <div class="msg user">
+              <div class="msg-avatar">PK</div>
+              <div class="msg-body">
+                <div class="msg-name">Pulkit</div>
+                <div class="msg-text">Plan a 5-day Tokyo trip for late April — focus on food and design, avoid touristy spots. Budget around $3,500.</div>
+              </div>
+            </div>
+
+            <div class="msg agent">
+              <div class="msg-avatar">mA</div>
+              <div class="msg-body">
+                <div class="msg-name">Trip Planner <span class="model">claude-opus-4</span></div>
+                <div class="msg-text">Breaking this into four parallel threads: flights, neighborhoods, design/food itinerary, and budget sanity-check. Starting with flight search via <code>@modelcontextprotocol/airbnb</code>...</div>
+
+                <div class="thinking-block">
+                  <span class="label">Extended thinking · 4.2s</span>
+                  Late April is shoulder season — cherry blossom crowds have thinned. I'll prioritize Shimokitazawa and Kuramae over Shibuya/Shinjuku given the "avoid touristy" constraint. For design-focused food, Nakameguro and Daikanyama have the best intersection...
+                </div>
+
+                <div class="tool-card">
+                  <div class="tool-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+                  <div class="tool-name">WebSearch</div>
+                  <div class="tool-path">"Tokyo Kuramae food design April 2026"</div>
+                  <div class="tool-status">● done</div>
+                </div>
+                <div class="tool-card">
+                  <div class="tool-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></div>
+                  <div class="tool-name">airbnb.search_listings</div>
+                  <div class="tool-path">location: Kuramae, check_in: 2026-04-22, guests: 2</div>
+                  <div class="tool-status">● done</div>
+                </div>
+                <div class="msg-text" style="margin-top:12px">
+                  Found 3 stays under $180/night in Kuramae — all within 6 minutes of stations. Drafting day-by-day itinerary now<span class="typing"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mock-composer">
+            <span>Ask a follow-up, or type</span>
+            <code style="color:var(--blue);font-family:var(--font-mono);font-size:12px;">#agent-name</code>
+            <span>to route…</span>
+            <span class="cursor"></span>
+            <button class="send-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 12 7-7 7 7M12 5v14"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- built-on logos bar -->
+  <div class="container built-on">
+    <div class="built-on-label">Powered by</div>
+    <div class="built-on-logos">
+      <span>Claude Code CLI</span>
+      <span>Model Context Protocol</span>
+      <span>React 19</span>
+      <span>Vite</span>
+      <span>Express</span>
+      <span>Tailwind CSS</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ FEATURES ═══════════════════════════ -->
+<section class="section" id="features">
+  <div class="container">
+    <span class="eyebrow reveal">Capabilities</span>
+    <h2 class="section-title reveal">Everything you need to <span class="italic">orchestrate agents.</span></h2>
+    <p class="section-sub reveal">Six tightly integrated surfaces, one local binary. No cloud dependency, no account, no usage cap beyond your own Anthropic plan.</p>
+
+    <div class="feature-grid reveal">
+
+      <article class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </div>
+        <h3>Parallel Sessions</h3>
+        <p>Spawn as many Claude conversations as you need. Each runs in its own tab, streams over WebSocket, and preserves full history to JSONL on disk.</p>
+        <div class="meta">
+          <span class="pill">WebSocket</span>
+          <span class="pill">JSONL</span>
+          <span class="pill">Hot swap</span>
+        </div>
+      </article>
+
+      <article class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+        </div>
+        <h3>Projects</h3>
+        <p>Group sessions by topic. Each project has its own color, system prompt, and session pool — drag-and-drop between projects to reorganize.</p>
+        <div class="meta">
+          <span class="pill">Drag &amp; drop</span>
+          <span class="pill">Per-project prompts</span>
+        </div>
+      </article>
+
+      <article class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 22v-2a6 6 0 016-6h4a6 6 0 016 6v2"/></svg>
+        </div>
+        <h3>Custom Agents</h3>
+        <p>Design subagents through a collaborative builder chat. Pin a model, scope tools, attach MCPs — saved to <code style="font-family:var(--font-mono);font-size:11.5px;color:var(--emerald);background:rgba(52,211,153,0.08);padding:1px 5px;border-radius:3px;">~/.claude/agents/</code>.</p>
+        <div class="meta">
+          <span class="pill">YAML frontmatter</span>
+          <span class="pill">CLI-compatible</span>
+        </div>
+      </article>
+
+      <article class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="6" r="3"/><circle cx="19" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M8 6h8M7 8v4a2 2 0 002 2h6a2 2 0 002-2V8"/></svg>
+        </div>
+        <h3>Workflows</h3>
+        <p>Chain steps into multi-agent pipelines. Use <code style="font-family:var(--font-mono);font-size:11.5px;color:var(--amber);background:rgba(251,191,36,0.08);padding:1px 5px;border-radius:3px;">&#123;&#123;step_N_output&#125;&#125;</code> to pipe outputs. Advance manually or on <code style="font-family:var(--font-mono);font-size:11.5px;color:var(--violet);background:rgba(167,139,250,0.08);padding:1px 5px;border-radius:3px;">[STEP_COMPLETE]</code>.</p>
+        <div class="meta">
+          <span class="pill">Interactive steps</span>
+          <span class="pill">DAG dependencies</span>
+        </div>
+      </article>
+
+      <article class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"/></svg>
+        </div>
+        <h3>MCP Marketplace</h3>
+        <p>Install plugins from three sources — official MCP registry (remote), NPM packages (local), or bring your own. All installs go through the Claude CLI.</p>
+        <div class="meta">
+          <span class="pill">Registry</span>
+          <span class="pill">NPM</span>
+          <span class="pill">Custom</span>
+        </div>
+      </article>
+
+      <article class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        </div>
+        <h3>Live Cost Tracking</h3>
+        <p>Token and USD counters update in real time — globally in the header, per-session in the title bar, and aggregated per-project and per-workflow.</p>
+        <div class="meta">
+          <span class="pill">Per-session</span>
+          <span class="pill">Per-workflow</span>
+          <span class="pill">Global</span>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ AGENT SHOWCASE ═══════════════════════════ -->
+<section class="section" id="agents">
+  <div class="container">
+    <div class="showcase">
+      <div class="showcase-text reveal">
+        <span class="eyebrow">Custom Agents</span>
+        <h2 style="margin-top:20px">Describe the role. <br><span class="italic">Claude writes the agent.</span></h2>
+        <p>The Agent Builder is a conversation — not a form. Tell Claude what you want; it drafts a full agent definition with a pinned model, scoped toolset, and MCP bindings. Saved as a markdown file in <code style="font-family:var(--font-mono);font-size:13px;color:var(--emerald);">~/.claude/agents/</code> so the Claude CLI picks it up everywhere.</p>
+        <ul class="feat-list">
+          <li>Pin any Claude model per agent — use Haiku for fast triage, Opus for synthesis</li>
+          <li>Scope exact tools — restrict a research agent to <code style="font-family:var(--font-mono);font-size:12px;">Read, Grep, WebSearch</code></li>
+          <li>Attach MCPs — wire in GitHub, Linear, Notion, Airbnb, or your own server</li>
+          <li>Ships with 7 starter agents: code-reviewer, debugger, architect, health-coach, research-assistant, shopping-advisor</li>
+        </ul>
+      </div>
+
+      <div class="showcase-card reveal">
+        <div class="agent-card-header">
+          <div class="agent-ico">CR</div>
+          <div>
+            <h4>code-reviewer</h4>
+            <p>Reviews code for correctness, style, and security</p>
+          </div>
+          <button class="launch">Launch session</button>
+        </div>
+        <pre class="agent-code"><span class="fm">---</span>
+<span class="k">name</span>: <span class="v">code-reviewer</span>
+<span class="k">description</span>: <span class="s">"Reviews code for correctness, style, and security"</span>
+<span class="k">model</span>: <span class="v">sonnet</span>
+<span class="k">tools</span>: <span class="v">Read, Glob, Grep, Bash, WebSearch</span>
+<span class="k">mcpServers</span>: <span class="v">github</span>
+<span class="fm">---</span>
+
+<span class="c"># Code Reviewer</span>
+
+You are a senior code reviewer. When asked to review code:
+
+1. Check for correctness and edge cases
+2. Flag security issues (OWASP top 10, injection, XSS)
+3. Suggest style improvements with concrete examples
+4. Identify test coverage gaps
+
+Present findings as a prioritized list — <span class="s">blocking</span>,
+<span class="s">should-fix</span>, <span class="s">nit</span>. Include file:line refs.</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ WORKFLOW SHOWCASE ═══════════════════════════ -->
+<section class="section" id="workflows">
+  <div class="container">
+    <div class="showcase reverse">
+      <div class="showcase-card reveal">
+        <div class="agent-card-header">
+          <div class="agent-ico" style="background:linear-gradient(135deg,var(--amber),#f59e0b)">TP</div>
+          <div>
+            <h4>Trip Planner</h4>
+            <p>Research → itinerary → budget → summary · 4 steps</p>
+          </div>
+          <button class="launch" style="color:var(--emerald)">● running</button>
+        </div>
+        <div class="workflow-card">
+          <div class="workflow-steps">
+            <div class="wf-step done">
+              <div class="num">1</div>
+              <div class="info">
+                <div class="name">Research destination</div>
+                <div class="detail">4.2k tokens · $0.012 · 8s</div>
+              </div>
+              <span class="model-pill">haiku</span>
+              <span class="status-dot"></span>
+            </div>
+            <div class="wf-connector"></div>
+            <div class="wf-step done">
+              <div class="num">2</div>
+              <div class="info">
+                <div class="name">Draft day-by-day itinerary</div>
+                <div class="detail">uses {{step_1_output}} · 8.7k · $0.041</div>
+              </div>
+              <span class="model-pill">sonnet</span>
+              <span class="status-dot"></span>
+            </div>
+            <div class="wf-connector"></div>
+            <div class="wf-step active">
+              <div class="num">3</div>
+              <div class="info">
+                <div class="name">Budget sanity-check</div>
+                <div class="detail">interactive · you&#39;re chatting with this step</div>
+              </div>
+              <span class="model-pill">opus</span>
+              <span class="status-dot"></span>
+            </div>
+            <div class="wf-connector"></div>
+            <div class="wf-step pending">
+              <div class="num">4</div>
+              <div class="info">
+                <div class="name">Final summary &amp; share link</div>
+                <div class="detail">waiting for step 3</div>
+              </div>
+              <span class="model-pill">sonnet</span>
+              <span class="status-dot"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="showcase-text reveal">
+        <span class="eyebrow">Multi-step Workflows</span>
+        <h2 style="margin-top:20px">Pipelines you can <span class="italic">talk to at every step.</span></h2>
+        <p>Workflows aren&#39;t automated black boxes. Each step opens a real Claude session you can steer in chat — when you&#39;re happy, send <code style="font-family:var(--font-mono);font-size:13px;color:var(--violet);">[STEP_COMPLETE]</code> or click the complete button. Step output auto-pipes into the next prompt via template variables.</p>
+        <ul class="feat-list">
+          <li>Variable interpolation: <code style="font-family:var(--font-mono);font-size:12px;">&#123;&#123;input&#125;&#125;</code>, <code style="font-family:var(--font-mono);font-size:12px;">&#123;&#123;step_N_output&#125;&#125;</code></li>
+          <li>DAG dependencies — skip, parallel, fan-out patterns</li>
+          <li>Aggregated cost per run, broken down per step</li>
+          <li>4 preset workflows: Trip Planner, Smart Purchase, Budget Check-Up, Wellness Plan</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ MCP MARKETPLACE ═══════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="showcase">
+      <div class="showcase-text reveal">
+        <span class="eyebrow">MCP Marketplace</span>
+        <h2 style="margin-top:20px">Install plugins with <span class="italic">one click.</span></h2>
+        <p>Three marketplace tabs covering every shape of MCP server — remote HTTP/SSE, local NPM, and hand-rolled custom commands. All installs flow through the Claude CLI (<code style="font-family:var(--font-mono);font-size:13px;">claude mcp add</code>), so what you install here is available everywhere else Claude runs.</p>
+        <ul class="feat-list">
+          <li><strong style="color:var(--fg);font-weight:500">Remote</strong> — hosted HTTP/SSE servers, zero config, instant connect</li>
+          <li><strong style="color:var(--fg);font-weight:500">Local</strong> — NPM packages run via <code style="font-family:var(--font-mono);font-size:12px;">npx</code>, sandboxed</li>
+          <li><strong style="color:var(--fg);font-weight:500">Custom</strong> — your own binary with env vars, fields, and secrets</li>
+        </ul>
+      </div>
+
+      <div class="showcase-card reveal">
+        <div class="mcp-card">
+          <div class="mcp-tabs">
+            <div class="mcp-tab active">Remote <span class="count">142</span></div>
+            <div class="mcp-tab">Local <span class="count">387</span></div>
+            <div class="mcp-tab">Custom</div>
+          </div>
+          <div class="mcp-list">
+            <div class="mcp-item installed">
+              <div class="row">
+                <div class="mcp-ico" style="background:rgba(96,165,250,0.15);color:var(--blue)">GH</div>
+                <div>
+                  <div class="name">GitHub</div>
+                  <div class="cat">code · issues · PRs</div>
+                </div>
+              </div>
+              <p class="desc">Read repos, manage issues, create pull requests, review comments.</p>
+              <button class="install-btn">● Installed</button>
+            </div>
+            <div class="mcp-item">
+              <div class="row">
+                <div class="mcp-ico" style="background:rgba(167,139,250,0.15);color:var(--violet)">LN</div>
+                <div>
+                  <div class="name">Linear</div>
+                  <div class="cat">tickets · projects</div>
+                </div>
+              </div>
+              <p class="desc">Create, triage, and link Linear issues from any agent session.</p>
+              <button class="install-btn">Install</button>
+            </div>
+            <div class="mcp-item installed">
+              <div class="row">
+                <div class="mcp-ico" style="background:rgba(52,211,153,0.15);color:var(--emerald)">FS</div>
+                <div>
+                  <div class="name">Filesystem</div>
+                  <div class="cat">local · read/write</div>
+                </div>
+              </div>
+              <p class="desc">Scope filesystem access to specific directories.</p>
+              <button class="install-btn">● Installed</button>
+            </div>
+            <div class="mcp-item">
+              <div class="row">
+                <div class="mcp-ico" style="background:rgba(251,191,36,0.15);color:var(--amber)">AB</div>
+                <div>
+                  <div class="name">Airbnb</div>
+                  <div class="cat">travel · search</div>
+                </div>
+              </div>
+              <p class="desc">Search listings, check availability, compare prices.</p>
+              <button class="install-btn">Install</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ CONFIG ═══════════════════════════ -->
+<section class="section" id="config">
+  <div class="container">
+    <span class="eyebrow reveal">Configuration</span>
+    <h2 class="section-title reveal">Any Claude model. <span class="italic">Any provider, eventually.</span></h2>
+    <p class="section-sub reveal">MiniAIons is provider-agnostic at its core. Models and CLIs are defined in <code style="font-family:var(--font-mono);font-size:14px;color:var(--amber);">config/providers.json</code> — add a new entry and the UI picks it up automatically.</p>
+
+    <div class="config-grid reveal">
+
+      <div class="config-card">
+        <div class="config-card-header">
+          <span class="filename">config/providers.json</span>
+          <span style="margin-left:auto">JSON</span>
+        </div>
+        <pre class="config-code">{
+  <span class="k">"claude"</span>: {
+    <span class="k">"name"</span>: <span class="s">"Claude Code"</span>,
+    <span class="k">"command"</span>: <span class="s">"claude"</span>,
+    <span class="k">"args"</span>: [<span class="s">"-p"</span>, <span class="s">"--output-format"</span>, <span class="s">"stream-json"</span>],
+    <span class="k">"healthCheck"</span>: <span class="s">"claude --version"</span>,
+    <span class="k">"models"</span>: [
+      { <span class="k">"id"</span>: <span class="s">"opus"</span>,   <span class="k">"inputCostPer1M"</span>: <span class="n">15</span> },
+      { <span class="k">"id"</span>: <span class="s">"sonnet"</span>, <span class="k">"inputCostPer1M"</span>: <span class="n">3</span> },
+      { <span class="k">"id"</span>: <span class="s">"haiku"</span>,  <span class="k">"inputCostPer1M"</span>: <span class="n">0.25</span> }
+    ],
+    <span class="k">"defaultModel"</span>: <span class="s">"sonnet"</span>
+  }
+  <span class="c">// Add a new provider (e.g. copilot) here</span>
+  <span class="c">// and the Dashboard picks it up on reload.</span>
+}</pre>
+      </div>
+
+      <div class="config-card">
+        <div class="config-card-header">
+          <span class="filename">~/.claude/agents/research-assistant.md</span>
+          <span style="margin-left:auto">Markdown</span>
+        </div>
+        <pre class="config-code"><span class="p">---</span>
+<span class="k">name</span>: <span class="s">research-assistant</span>
+<span class="k">description</span>: <span class="s">Deep-research agent with citations</span>
+<span class="k">model</span>: <span class="s">opus</span>
+<span class="k">tools</span>: <span class="s">WebSearch, WebFetch, Read, Grep</span>
+<span class="k">mcpServers</span>: <span class="s">linear, notion</span>
+<span class="p">---</span>
+
+<span class="c"># Research Assistant</span>
+
+You are a meticulous research agent. Always:
+
+- <span class="s">Cite sources</span> with URLs and publication dates
+- <span class="s">Cross-verify</span> claims across at least two sources
+- <span class="s">Flag uncertainty</span> explicitly — never fabricate
+
+Return findings as a structured markdown brief
+with an executive summary at the top.</pre>
+      </div>
+
+    </div>
+
+    <div class="tech-stack reveal">
+      <span class="tech-chip">React <span class="v">19</span></span>
+      <span class="tech-chip">Vite <span class="v">6</span></span>
+      <span class="tech-chip">Tailwind CSS <span class="v">v4</span></span>
+      <span class="tech-chip">Zustand <span class="v">5</span></span>
+      <span class="tech-chip">Radix UI</span>
+      <span class="tech-chip">Framer Motion</span>
+      <span class="tech-chip">Express <span class="v">5</span></span>
+      <span class="tech-chip">ws</span>
+      <span class="tech-chip">node-pty</span>
+      <span class="tech-chip">TypeScript <span class="v">5</span></span>
+      <span class="tech-chip">Claude Code CLI</span>
+      <span class="tech-chip">Model Context Protocol</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ CTA FINAL ═══════════════════════════ -->
+<div class="cta-final">
+  <div class="cta-card reveal">
+    <h2>Run it locally.<br><span class="italic">Own your command center.</span></h2>
+    <p>One script spins up the server, builds the client, and opens the dashboard. No accounts, no tracking, no cloud — just your Claude CLI and your browser.</p>
+    <div class="hero-cta" style="margin-top:40px;">
+      <a class="btn btn-primary" href="https://github.com/pulkitkkr/MiniAIons" target="_blank" rel="noopener">
+        Clone on GitHub
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/pulkitkkr/MiniAIons/blob/main/README.md" target="_blank" rel="noopener">
+        Read the docs
+      </a>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-inner">
+      <div class="logo">
+        <span class="logo-mark">mA</span>
+        MiniAIons
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/pulkitkkr/MiniAIons" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://docs.claude.com/en/docs/claude-code/overview" target="_blank" rel="noopener">Claude Code</a>
+        <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">MCP</a>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:12px;color:var(--fg-faint)">
+        Built by @pulkitkkr · MIT
+      </div>
+    </div>
+  </footer>
+</div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   INTERACTIONS
+   ═══════════════════════════════════════════════════════════ */
+
+// Copy install command
+function copyInstall() {
+  const cmd = 'git clone https://github.com/pulkitkkr/MiniAIons.git && ./launch.sh';
+  navigator.clipboard.writeText(cmd).then(() => {
+    const label = document.getElementById('copyLabel');
+    label.textContent = 'Copied';
+    setTimeout(() => { label.textContent = 'Copy'; }, 1400);
+  });
+}
+
+// Scroll-based reveal
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('in');
+      io.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+// Feature card cursor gradient
+document.querySelectorAll('.feature').forEach(card => {
+  card.addEventListener('mousemove', (e) => {
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
+    card.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
+  });
+});
+</script>
+
+</body>
+</html>
