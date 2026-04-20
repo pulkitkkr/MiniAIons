@@ -1,0 +1,508 @@
+{
+  "registry": [
+    {
+      "name": "filesystem",
+      "description": "Read, write, search, and manage local files and directories",
+      "command": "@modelcontextprotocol/server-filesystem",
+      "args": ["/Users"],
+      "env": {},
+      "category": "files",
+      "installCmd": "npm install -g @modelcontextprotocol/server-filesystem",
+      "setup": {
+        "instructions": "Specify which directories the server is allowed to access.",
+        "fields": [
+          {
+            "key": "allowed_directories",
+            "type": "args",
+            "label": "Allowed Directories",
+            "description": "Comma-separated list of directories the server can read/write",
+            "placeholder": "/Users/you/Documents, /Users/you/Projects",
+            "required": true,
+            "secret": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "fetch",
+      "description": "Fetch any URL — web pages, APIs, JSON data",
+      "command": "@modelcontextprotocol/server-fetch",
+      "args": [],
+      "env": {},
+      "category": "web",
+      "installCmd": "npm install -g @modelcontextprotocol/server-fetch"
+    },
+    {
+      "name": "memory",
+      "description": "Persistent memory across sessions — remembers facts and preferences",
+      "command": "@modelcontextprotocol/server-memory",
+      "args": [],
+      "env": {},
+      "category": "knowledge",
+      "installCmd": "npm install -g @modelcontextprotocol/server-memory"
+    },
+    {
+      "name": "puppeteer",
+      "description": "Browser automation — screenshots, web scraping, form filling",
+      "command": "@modelcontextprotocol/server-puppeteer",
+      "args": [],
+      "env": {},
+      "category": "automation",
+      "installCmd": "npm install -g @modelcontextprotocol/server-puppeteer"
+    },
+    {
+      "name": "brave-search",
+      "description": "Search the web using Brave Search API",
+      "command": "@modelcontextprotocol/server-brave-search",
+      "args": [],
+      "env": { "BRAVE_API_KEY": "" },
+      "category": "web",
+      "installCmd": "npm install -g @modelcontextprotocol/server-brave-search",
+      "setup": {
+        "instructions": "Sign up for a free Brave Search API key to enable web search.",
+        "fields": [
+          {
+            "key": "BRAVE_API_KEY",
+            "type": "env",
+            "label": "Brave Search API Key",
+            "description": "API key from Brave Search developer portal",
+            "placeholder": "BSA-xxxxxxxxxxxxxxxxxxxx",
+            "helpUrl": "https://brave.com/search/api/",
+            "required": true,
+            "secret": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "google-maps",
+      "description": "Places, directions, geocoding, distance — great for travel planning",
+      "command": "@modelcontextprotocol/server-google-maps",
+      "args": [],
+      "env": { "GOOGLE_MAPS_API_KEY": "" },
+      "category": "travel",
+      "installCmd": "npm install -g @modelcontextprotocol/server-google-maps",
+      "setup": {
+        "instructions": "Create a Google Cloud project and enable the Maps API to get a key.",
+        "fields": [
+          {
+            "key": "GOOGLE_MAPS_API_KEY",
+            "type": "env",
+            "label": "Google Maps API Key",
+            "description": "API key with Maps JavaScript, Places, and Directions APIs enabled",
+            "placeholder": "AIzaSy...",
+            "helpUrl": "https://console.cloud.google.com/apis/credentials",
+            "required": true,
+            "secret": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "github",
+      "description": "GitHub repos, issues, PRs, code search, and file access",
+      "command": "@modelcontextprotocol/server-github",
+      "args": [],
+      "env": { "GITHUB_TOKEN": "" },
+      "category": "development",
+      "installCmd": "npm install -g @modelcontextprotocol/server-github",
+      "setup": {
+        "instructions": "Create a GitHub personal access token with the scopes you need (repo, read:org, etc.).",
+        "fields": [
+          {
+            "key": "GITHUB_TOKEN",
+            "type": "env",
+            "label": "GitHub Personal Access Token",
+            "description": "Fine-grained or classic token with repo access",
+            "placeholder": "ghp_xxxxxxxxxxxxxxxxxxxx",
+            "helpUrl": "https://github.com/settings/tokens",
+            "required": true,
+            "secret": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "sqlite",
+      "description": "Query and manage SQLite databases — great for tracking data",
+      "command": "@modelcontextprotocol/server-sqlite",
+      "args": [],
+      "env": {},
+      "category": "data",
+      "installCmd": "npm install -g @modelcontextprotocol/server-sqlite",
+      "setup": {
+        "instructions": "Provide the path to your SQLite database file. A new file will be created if it doesn't exist.",
+        "fields": [
+          {
+            "key": "database_path",
+            "type": "args",
+            "label": "Database Path",
+            "description": "Absolute path to the SQLite database file",
+            "placeholder": "/Users/you/data/mydb.sqlite",
+            "required": true,
+            "secret": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "slack",
+      "description": "Read and send Slack messages, search channels",
+      "command": "@modelcontextprotocol/server-slack",
+      "args": [],
+      "env": { "SLACK_BOT_TOKEN": "" },
+      "category": "communication",
+      "installCmd": "npm install -g @modelcontextprotocol/server-slack",
+      "setup": {
+        "instructions": "Create a Slack app and install it to your workspace to get a bot token.",
+        "fields": [
+          {
+            "key": "SLACK_BOT_TOKEN",
+            "type": "env",
+            "label": "Slack Bot Token",
+            "description": "Bot user OAuth token from your Slack app (starts with xoxb-)",
+            "placeholder": "xoxb-xxxxxxxxxxxx-xxxxxxxxxxxx",
+            "helpUrl": "https://api.slack.com/apps",
+            "required": true,
+            "secret": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "google-calendar",
+      "description": "View, create, and manage Google Calendar events",
+      "command": "@anthropic-ai/mcp-server-google-calendar",
+      "args": [],
+      "env": {},
+      "category": "calendar",
+      "installCmd": "npm install -g @anthropic-ai/mcp-server-google-calendar",
+      "setup": {
+        "instructions": "Requires Google OAuth setup. Create a Google Cloud project, enable the Calendar API, create OAuth 2.0 credentials (Desktop app type), download the credentials JSON, and run the server once to complete the OAuth flow in your browser.",
+        "fields": [
+          {
+            "key": "GOOGLE_CLIENT_ID",
+            "type": "env",
+            "label": "Google OAuth Client ID",
+            "description": "OAuth 2.0 Client ID from Google Cloud Console",
+            "placeholder": "xxxx.apps.googleusercontent.com",
+            "helpUrl": "https://console.cloud.google.com/apis/credentials",
+            "required": true,
+            "secret": false
+          },
+          {
+            "key": "GOOGLE_CLIENT_SECRET",
+            "type": "env",
+            "label": "Google OAuth Client Secret",
+            "description": "OAuth 2.0 Client Secret from Google Cloud Console",
+            "placeholder": "GOCSPX-...",
+            "required": true,
+            "secret": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "sequential-thinking",
+      "description": "Step-by-step reasoning for complex problems and decisions",
+      "command": "@modelcontextprotocol/server-sequential-thinking",
+      "args": [],
+      "env": {},
+      "category": "reasoning",
+      "installCmd": "npm install -g @modelcontextprotocol/server-sequential-thinking"
+    },
+    {
+      "name": "everart",
+      "description": "Generate images and artwork using AI",
+      "command": "@modelcontextprotocol/server-everart",
+      "args": [],
+      "env": { "EVERART_API_KEY": "" },
+      "category": "creative",
+      "installCmd": "npm install -g @modelcontextprotocol/server-everart",
+      "setup": {
+        "instructions": "Get an API key from Everart to generate images.",
+        "fields": [
+          {
+            "key": "EVERART_API_KEY",
+            "type": "env",
+            "label": "Everart API Key",
+            "description": "API key from your Everart account",
+            "placeholder": "ea-xxxxxxxxxxxxxxxxxxxx",
+            "helpUrl": "https://everart.ai",
+            "required": true,
+            "secret": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "everything",
+      "description": "Reference MCP server for testing — echoes, samples, prompts",
+      "command": "@modelcontextprotocol/server-everything",
+      "args": [],
+      "env": {},
+      "category": "development",
+      "installCmd": "npm install -g @modelcontextprotocol/server-everything"
+    },
+    {
+      "name": "notion",
+      "description": "Read and manage Notion pages, databases, and workspaces",
+      "command": "@notionhq/mcp-server-notion",
+      "args": [],
+      "env": { "NOTION_API_KEY": "" },
+      "category": "productivity",
+      "installCmd": "npm install -g @notionhq/mcp-server-notion",
+      "setup": {
+        "instructions": "Create a Notion integration and share the pages/databases you want to access with it.",
+        "fields": [
+          {
+            "key": "NOTION_API_KEY",
+            "type": "env",
+            "label": "Notion Integration Token",
+            "description": "Internal integration secret from Notion developer portal",
+            "placeholder": "ntn_xxxxxxxxxxxxxxxxxxxx",
+            "helpUrl": "https://www.notion.so/my-integrations",
+            "required": true,
+            "secret": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "linear",
+      "description": "Manage Linear issues, projects, and teams",
+      "command": "@linear/mcp-server",
+      "args": [],
+      "env": { "LINEAR_API_KEY": "" },
+      "category": "productivity",
+      "installCmd": "npm install -g @linear/mcp-server",
+      "setup": {
+        "instructions": "Generate a personal API key from your Linear account settings.",
+        "fields": [
+          {
+            "key": "LINEAR_API_KEY",
+            "type": "env",
+            "label": "Linear API Key",
+            "description": "Personal API key from Linear Settings > API",
+            "placeholder": "lin_api_xxxxxxxxxxxxxxxxxxxx",
+            "helpUrl": "https://linear.app/settings/api",
+            "required": true,
+            "secret": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "exa-search",
+      "description": "AI-powered web search with content extraction",
+      "command": "@exa-labs/mcp-server-exa",
+      "args": [],
+      "env": { "EXA_API_KEY": "" },
+      "category": "web",
+      "installCmd": "npm install -g @exa-labs/mcp-server-exa",
+      "setup": {
+        "instructions": "Sign up at Exa to get an API key for AI-powered search.",
+        "fields": [
+          {
+            "key": "EXA_API_KEY",
+            "type": "env",
+            "label": "Exa API Key",
+            "description": "API key from your Exa dashboard",
+            "placeholder": "exa-xxxxxxxxxxxxxxxxxxxx",
+            "helpUrl": "https://dashboard.exa.ai/api-keys",
+            "required": true,
+            "secret": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "todoist",
+      "description": "Manage Todoist tasks, projects, labels, and reminders",
+      "command": "@anthropic-ai/mcp-server-todoist",
+      "args": [],
+      "env": { "TODOIST_API_TOKEN": "" },
+      "category": "productivity",
+      "installCmd": "npm install -g @anthropic-ai/mcp-server-todoist",
+      "setup": {
+        "instructions": "Get your Todoist API token from Todoist Settings > Integrations > Developer.",
+        "fields": [
+          {
+            "key": "TODOIST_API_TOKEN",
+            "type": "env",
+            "label": "Todoist API Token",
+            "description": "API token from Todoist integrations settings",
+            "placeholder": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "helpUrl": "https://todoist.com/app/settings/integrations/developer",
+            "required": true,
+            "secret": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "apple-notes",
+      "description": "Read and search Apple Notes on macOS",
+      "command": "@anthropic-ai/mcp-server-apple-notes",
+      "args": [],
+      "env": {},
+      "category": "productivity",
+      "installCmd": "npm install -g @anthropic-ai/mcp-server-apple-notes"
+    },
+    {
+      "name": "postgres",
+      "description": "Query PostgreSQL databases with read-only access",
+      "command": "@modelcontextprotocol/server-postgres",
+      "args": [],
+      "env": { "POSTGRES_URL": "" },
+      "category": "data",
+      "installCmd": "npm install -g @modelcontextprotocol/server-postgres",
+      "setup": {
+        "instructions": "Provide a PostgreSQL connection URL. The server connects in read-only mode.",
+        "fields": [
+          {
+            "key": "database_url",
+            "type": "args",
+            "label": "PostgreSQL Connection URL",
+            "description": "Full connection string including host, port, database, and credentials",
+            "placeholder": "postgresql://user:password@localhost:5432/mydb",
+            "required": true,
+            "secret": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "gdrive",
+      "description": "Search and read Google Drive files and documents",
+      "command": "@modelcontextprotocol/server-gdrive",
+      "args": [],
+      "env": {},
+      "category": "files",
+      "installCmd": "npm install -g @modelcontextprotocol/server-gdrive",
+      "setup": {
+        "instructions": "Requires Google OAuth setup. Create a Google Cloud project, enable the Drive API, create OAuth 2.0 credentials (Desktop app type), and run the server once to complete the OAuth flow in your browser.",
+        "fields": [
+          {
+            "key": "GOOGLE_CLIENT_ID",
+            "type": "env",
+            "label": "Google OAuth Client ID",
+            "description": "OAuth 2.0 Client ID from Google Cloud Console",
+            "placeholder": "xxxx.apps.googleusercontent.com",
+            "helpUrl": "https://console.cloud.google.com/apis/credentials",
+            "required": true,
+            "secret": false
+          },
+          {
+            "key": "GOOGLE_CLIENT_SECRET",
+            "type": "env",
+            "label": "Google OAuth Client Secret",
+            "description": "OAuth 2.0 Client Secret from Google Cloud Console",
+            "placeholder": "GOCSPX-...",
+            "required": true,
+            "secret": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "gmail",
+      "description": "Read, search, and draft Gmail emails",
+      "command": "@anthropic-ai/mcp-server-gmail",
+      "args": [],
+      "env": {},
+      "category": "communication",
+      "installCmd": "npm install -g @anthropic-ai/mcp-server-gmail",
+      "setup": {
+        "instructions": "Requires Google OAuth setup. Create a Google Cloud project, enable the Gmail API, create OAuth 2.0 credentials (Desktop app type), and run the server once to complete the OAuth flow in your browser.",
+        "fields": [
+          {
+            "key": "GOOGLE_CLIENT_ID",
+            "type": "env",
+            "label": "Google OAuth Client ID",
+            "description": "OAuth 2.0 Client ID from Google Cloud Console",
+            "placeholder": "xxxx.apps.googleusercontent.com",
+            "helpUrl": "https://console.cloud.google.com/apis/credentials",
+            "required": true,
+            "secret": false
+          },
+          {
+            "key": "GOOGLE_CLIENT_SECRET",
+            "type": "env",
+            "label": "Google OAuth Client Secret",
+            "description": "OAuth 2.0 Client Secret from Google Cloud Console",
+            "placeholder": "GOCSPX-...",
+            "required": true,
+            "secret": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "time",
+      "description": "Get current time, timezone conversion, date calculations",
+      "command": "@modelcontextprotocol/server-time",
+      "args": [],
+      "env": {},
+      "category": "utility",
+      "installCmd": "npm install -g @modelcontextprotocol/server-time"
+    },
+    {
+      "name": "weather",
+      "description": "Get weather forecasts and current conditions by location",
+      "command": "@anthropic-ai/mcp-server-weather",
+      "args": [],
+      "env": { "OPENWEATHER_API_KEY": "" },
+      "category": "travel",
+      "installCmd": "npm install -g @anthropic-ai/mcp-server-weather",
+      "setup": {
+        "instructions": "Sign up for a free OpenWeather API key to get weather data.",
+        "fields": [
+          {
+            "key": "OPENWEATHER_API_KEY",
+            "type": "env",
+            "label": "OpenWeather API Key",
+            "description": "API key from OpenWeather (free tier available)",
+            "placeholder": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "helpUrl": "https://home.openweathermap.org/api_keys",
+            "required": true,
+            "secret": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "twitter",
+      "description": "Read tweets, search, and post to Twitter/X",
+      "command": "@anthropic-ai/mcp-server-twitter",
+      "args": [],
+      "env": { "TWITTER_BEARER_TOKEN": "" },
+      "category": "communication",
+      "installCmd": "npm install -g @anthropic-ai/mcp-server-twitter",
+      "setup": {
+        "instructions": "Create a Twitter/X developer app and get a Bearer Token for API access.",
+        "fields": [
+          {
+            "key": "TWITTER_BEARER_TOKEN",
+            "type": "env",
+            "label": "Twitter Bearer Token",
+            "description": "Bearer token from your Twitter developer app",
+            "placeholder": "AAAAAAAAAAAAAAAAAAA...",
+            "helpUrl": "https://developer.x.com/en/portal/dashboard",
+            "required": true,
+            "secret": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "youtube-transcript",
+      "description": "Get transcripts from YouTube videos for summarization",
+      "command": "@anthropic-ai/mcp-server-youtube-transcript",
+      "args": [],
+      "env": {},
+      "category": "web",
+      "installCmd": "npm install -g @anthropic-ai/mcp-server-youtube-transcript"
+    }
+  ]
+}

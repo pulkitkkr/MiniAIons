@@ -1,0 +1,10 @@
+node_modules/
+dist/
+data/
+.env
+.npmrc
+*.log
+.DS_Store
+.claude/
+Profile.pdf
+Resume.pdf

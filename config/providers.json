@@ -1,0 +1,15 @@
+{
+  "claude": {
+    "name": "Claude Code",
+    "command": "claude",
+    "args": ["-p", "--output-format", "stream-json", "--verbose"],
+    "env": {},
+    "healthCheck": "claude --version",
+    "models": [
+      { "id": "opus", "name": "Claude Opus 4", "inputCostPer1M": 15, "outputCostPer1M": 75 },
+      { "id": "sonnet", "name": "Claude Sonnet 4", "inputCostPer1M": 3, "outputCostPer1M": 15 },
+      { "id": "haiku", "name": "Claude Haiku 3.5", "inputCostPer1M": 0.25, "outputCostPer1M": 1.25 }
+    ],
+    "defaultModel": "sonnet"
+  }
+}
