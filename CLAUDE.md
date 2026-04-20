@@ -1,4 +1,4 @@
-# MyAgents
+# MiniAIons
 
 Local web-based command center for managing multiple Claude CLI agent instances with a modern GUI.
 
@@ -11,7 +11,7 @@ npm run build         # Production build
 
 ## Project Structure
 ```
-MyAgents/
+MiniAIons/
 ├── server/                         # Express + WebSocket backend
 │   ├── src/
 │   │   ├── index.ts                # Entry: Express app + all REST routes + WS handler

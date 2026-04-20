@@ -15,7 +15,7 @@ export default function Settings() {
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Settings</h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Configure MyAgents preferences</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Configure MiniAIons preferences</p>
       </div>
 
       {/* Appearance */}
@@ -92,7 +92,7 @@ export default function Settings() {
             <span className="text-white font-bold text-sm">M</span>
           </div>
           <div>
-            <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">MyAgents v1.0.0</h2>
+            <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">MiniAIons v1.0.0</h2>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">Local command center for Claude CLI agents</p>
           </div>
         </div>

@@ -486,7 +486,7 @@ async function main() {
 
   const PORT = process.env.PORT || 3001;
   server.listen(PORT, () => {
-    console.log(`\n  MyAgents server running on http://localhost:${PORT}`);
+    console.log(`\n  MiniAIons server running on http://localhost:${PORT}`);
     console.log(`  WebSocket available at ws://localhost:${PORT}/ws\n`);
   });
 }

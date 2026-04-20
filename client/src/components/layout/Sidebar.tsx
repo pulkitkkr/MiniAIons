@@ -59,7 +59,7 @@ export default function Sidebar() {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-md shrink-0">
             <Sparkles className="w-4 h-4 text-white" strokeWidth={2.5} />
           </div>
-          {!collapsed && <span className="font-bold text-base tracking-tight text-zinc-900 dark:text-zinc-100">MyAgents</span>}
+          {!collapsed && <span className="font-bold text-base tracking-tight text-zinc-900 dark:text-zinc-100">MiniAIons</span>}
         </div>
         <button
           onClick={toggleSidebar}

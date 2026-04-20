@@ -34,7 +34,7 @@ export const useUIStore = create<UIStore>()(
       toggleCommandPalette: () => set((s) => ({ commandPaletteOpen: !s.commandPaletteOpen })),
     }),
     {
-      name: 'myagents-ui',
+      name: 'miniaions-ui',
       onRehydrateStorage: () => (state) => {
         if (state) applyTheme(state.theme);
       },

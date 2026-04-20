@@ -1,10 +1,10 @@
 #!/bin/bash
-# MyAgents - One-click launch script
+# MiniAIons - One-click launch script
 # Double-click this file or run: ./launch.sh
 
 cd "$(dirname "$0")"
 
-echo "🤖 Starting MyAgents..."
+echo "🤖 Starting MiniAIons..."
 
 # Check if node_modules exists
 if [ ! -d "node_modules" ]; then
@@ -34,7 +34,7 @@ elif command -v xdg-open &> /dev/null; then
 fi
 
 echo ""
-echo "✅ MyAgents is running!"
+echo "✅ MiniAIons is running!"
 echo "   Dashboard: http://localhost:5173"
 echo "   API:       http://localhost:3001"
 echo ""
